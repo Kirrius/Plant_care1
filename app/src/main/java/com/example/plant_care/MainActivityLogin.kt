@@ -60,6 +60,7 @@ class MainActivityLogin : AppCompatActivity() {
     private lateinit var loginEditText: EditText
     private lateinit var submitButton: Button
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_login)
