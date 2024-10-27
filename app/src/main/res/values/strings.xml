@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Plant_care</string>
+    <string name="logo_text">Начните уход за своим растением</string>
+    <string name="start">Начать</string>
+</resources>
