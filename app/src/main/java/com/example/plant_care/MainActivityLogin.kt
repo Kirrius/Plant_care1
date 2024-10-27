@@ -2,6 +2,9 @@ package com.example.plant_care
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -13,11 +16,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import android.content.Context
 import android.annotation.SuppressLint
+import android.widget.Toast
+import androidx.lifecycle.lifecycleScope
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.coroutines.launch
 
-@Entity(tableName = "login", primaryKeys = ["id", "email"])
+@Entity(tableName = "login")
 data class User(
     @PrimaryKey(autoGenerate = true) val id: Int = 0, // Автоинкрементный id
     @ColumnInfo(name = "email") val email: String, // Уникальный email
@@ -25,18 +31,9 @@ data class User(
     @ColumnInfo(name = "login") val login: String
 )
 
-@Dao
-interface UserDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertUser(user: User)
-
-    @Query("SELECT * FROM login WHERE email = :email LIMIT 1")
-    suspend fun getUserByEmail(email: String): User?
-}
-
 @Database(entities = [User::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun userDao(): UserDao
+    //abstract fun userDao(): UserDao
 
     companion object {
         @Volatile
@@ -66,15 +63,15 @@ class MainActivityLogin : AppCompatActivity() {
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContentView(R.layout.activity_main_login)
+        //enableEdgeToEdge()
 
         db = AppDatabase.getDatabase(this)
 
-        val emailEditText = androidx.appcompat.app.AppCompatActivity.findViewById(R.id.emailEditText)
-        val passEditText = findViewById(R.id.passEditText)
-        val loginEditText = findViewById(R.id.loginEditText)
-        val submitButton = findViewById(R.id.regbutton)
+        val emailEditText = findViewById<EditText>(R.id.emailEditText)
+        val passEditText = findViewById<EditText>(R.id.passEditText)
+        val loginEditText = findViewById<EditText>(R.id.loginEditText)
+        val submitButton = findViewById<Button>(R.id.regbutton)
 
         submitButton.setOnClickListener {
             val email = emailEditText.text.toString()
@@ -85,7 +82,7 @@ class MainActivityLogin : AppCompatActivity() {
                 val user = User(email = email, pass = pass, login = login)
                 lifecycleScope.launch {
                     try {
-                        db.userDao().insertUser(user)
+                        //db.userDao().insertUser(user)
                         Toast.makeText(this@MainActivityLogin, "User added", Toast.LENGTH_SHORT).show()
                     } catch (e: Exception) {
                         Toast.makeText(this@MainActivityLogin, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
