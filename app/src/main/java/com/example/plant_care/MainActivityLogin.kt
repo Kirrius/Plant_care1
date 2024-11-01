@@ -25,34 +25,72 @@ import kotlinx.coroutines.launch
 
 @Entity(tableName = "login")
 data class User(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0, // Автоинкрементный id
-    @ColumnInfo(name = "email") val email: String, // Уникальный email
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @ColumnInfo(name = "email") val email: String,
     @ColumnInfo(name = "pass") val pass: String,
     @ColumnInfo(name = "login") val login: String
 )
 
-@Database(entities = [User::class], version = 1, exportSchema = false)
-abstract class AppDatabase : RoomDatabase() {
-    //abstract fun userDao(): UserDao
+@Dao
+interface login {
+    @Insert(entity = StatisticDbEntity::class)
+    fun insertNewStatisticData(statistic: StatisticDbEntity)
 
-    companion object {
-        @Volatile
-        private var INSTANCE: AppDatabase? = null
+    @Query("SELECT statistic.id, result_name, difficulty_name, mistakes, points FROM statistic\n" +
+            "INNER JOIN results ON statistic.result_id = results.id\n" +
+            "INNER JOIN difficulty_levels ON statistic.difficult_id = difficulty_levels.id;")
+    fun getAllStatisticData(): List<StatisticInfoTuple>
 
-        fun getDatabase(context: Context): AppDatabase {
-            return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
-                    context.applicationContext,
-                    AppDatabase::class.java,
-                    "user_database"
-                ).createFromAsset("users.sql").build()
-                INSTANCE = instance
-                instance
-            }
+    @Query("DELETE FROM statistic WHERE id = :statisticId")
+    fun deleteStatisticDataById(statisticId: Long)
+}
+
+@Database(
+    version = 1,
+    entities = [
+        User::class,
+    ]
+            abstract class AppDatabase : RoomDatabase() {
+
+        abstract fun getStatisticDao(): login
+
+    }
+)
+
+class StatisticRepository(private val statisticDao: StatisticDao) {
+
+    suspend fun insertNewStatisticData(statisticDbEntity: StatisticDbEntity) {
+        withContext(Dispatchers.IO) {
+            statisticDao.insertNewStatisticData(statisticDbEntity)
+        }
+    }
+
+    suspend fun getAllStatisticData(): List<StatisticInfoTuple> {
+        return withContext(Dispatchers.IO) {
+            return@withContext statisticDao.getAllStatisticData()
+        }
+    }
+
+    suspend fun removeStatisticDataById(id: Long) {
+        withContext(Dispatchers.IO) {
+            statisticDao.deleteStatisticDataById(id)
         }
     }
 }
 
+data class StatisticInfoTuple(
+    val id: Long,
+    @ColumnInfo(name = "email") val email: String,
+    @ColumnInfo(name = "pass") val pass: String,
+    @ColumnInfo(name = "login") val login: String
+)
+
+fun insertNewStatisticDataInDatabase(mistakes: Long, points: Long) {
+    viewModelScope.launch {
+        val newStatistic = Statistic(currentResult, currentDifficultyLevel, mistakes, points)
+        statisticRepository.insertNewStatisticData(newStatistic.toStatisticDbEntity())
+    }
+}
 class MainActivityLogin : AppCompatActivity() {
     private lateinit var db: AppDatabase
     private lateinit var emailEditText: EditText
@@ -77,20 +115,6 @@ class MainActivityLogin : AppCompatActivity() {
             val email = emailEditText.text.toString()
             val pass = passEditText.text.toString()
             val login = loginEditText.text.toString()
-
-            if (email.isNotEmpty() && pass.isNotEmpty() && login.isNotEmpty()) {
-                val user = User(email = email, pass = pass, login = login)
-                lifecycleScope.launch {
-                    try {
-                        //db.userDao().insertUser(user)
-                        Toast.makeText(this@MainActivityLogin, "User added", Toast.LENGTH_SHORT).show()
-                    } catch (e: Exception) {
-                        Toast.makeText(this@MainActivityLogin, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
-            }
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
